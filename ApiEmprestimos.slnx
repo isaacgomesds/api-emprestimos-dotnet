@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="src/ApiEmprestimos.Api/ApiEmprestimos.Api.csproj" />
+  <Project Path="src/ApiEmprestimos.Domain/ApiEmprestimos.Domain.csproj" Id="4bc3a546-34c4-4bed-89af-9440d9852273" />
+  <Project Path="src/ApiEmprestimos.Infrastructure/ApiEmprestimos.Infrastructure.csproj" Id="00add9fb-5185-4fa5-ad95-22169954fe95" />
+  <Project Path="tests/ApiEmprestimos.Tests.csproj" Id="f24dd741-eb84-457d-8a2c-c9bcbf31cde8" />
+</Solution>
