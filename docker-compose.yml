@@ -32,5 +32,22 @@ services:
             retries: 10
         restart: unless-stopped
 
+    api:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: api-emprestimos-api
+        environment:
+            ASPNETCORE_ENVIRONMENT: Development
+            ConnectionStrings__LibraryDatabase: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+            Redis__ConnectionString: redis:6379
+        ports:
+            - '5000:8080'
+        depends_on:
+            postgres:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+
 volumes:
     postgres_data:
