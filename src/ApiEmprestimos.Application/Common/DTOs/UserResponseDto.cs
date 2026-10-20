@@ -1,3 +1,4 @@
 namespace ApiEmprestimos.Application.Common.DTOs;
 
-public sealed record UserResponseDto(Guid Id, string Name, string Email, DateTime CreatedAtUtc);
+/// <summary>Represents a library user returned by the application.</summary>
+public sealed record UserResponseDto(Guid Id, string Name, string Email, DateTimeOffset CreatedAtUtc);

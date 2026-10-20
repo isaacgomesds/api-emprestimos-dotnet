@@ -1,19 +1,36 @@
 using ApiEmprestimos.Application;
-using ApiEmprestimos.Infrastructure.Data;
+using ApiEmprestimos.Api.Endpoints;
+using ApiEmprestimos.Api.Middleware;
 using ApiEmprestimos.Infrastructure;
+using ApiEmprestimos.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<ApiExceptionHandler>();
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddApplication();
+var connectionString = builder.Configuration.GetConnectionString("LibraryDatabase");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "Connection string 'LibraryDatabase' is not configured. Set ConnectionStrings__LibraryDatabase or configure it in appsettings.");
+}
+
 builder.Services.AddDbContext<LibraryDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("LibraryDatabase")));
+    options.UseNpgsql(connectionString));
 builder.Services.AddInfrastructure();
 
 var app = builder.Build();
+
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -22,5 +39,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.MapBookEndpoints();
+app.MapUserEndpoints();
+app.MapLoanEndpoints();
 
 app.Run();

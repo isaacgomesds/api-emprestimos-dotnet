@@ -1,3 +1,83 @@
 @ApiEmprestimos.Api_HostAddress = http://localhost:5207
+@correlationId = 9f19379b-3643-4eec-9db1-5306de5bc882
+@bookId = 11111111-1111-1111-1111-111111111111
+@userId = 22222222-2222-2222-2222-222222222222
+@loanId = 33333333-3333-3333-3333-333333333333
 
-###
+### Create a book
+POST {{ApiEmprestimos.Api_HostAddress}}/books
+Content-Type: application/json
+X-Actor: reader
+X-Correlation-ID: {{correlationId}}
+
+{
+  "title": "The Left Hand of Darkness",
+  "isbn": "9780441478125",
+  "author": "Ursula K. Le Guin",
+  "totalCopies": 3
+}
+
+### List active books
+GET {{ApiEmprestimos.Api_HostAddress}}/books
+
+### Get a book
+GET {{ApiEmprestimos.Api_HostAddress}}/books/{{bookId}}
+
+### Partially update a book
+PATCH {{ApiEmprestimos.Api_HostAddress}}/books/{{bookId}}
+Content-Type: application/json
+X-Actor: librarian
+X-Correlation-ID: {{correlationId}}
+
+{
+  "totalCopies": 4
+}
+
+### Deactivate a book
+DELETE {{ApiEmprestimos.Api_HostAddress}}/books/{{bookId}}
+X-Actor: librarian
+X-Correlation-ID: {{correlationId}}
+
+### Create a user
+POST {{ApiEmprestimos.Api_HostAddress}}/users
+Content-Type: application/json
+X-Actor: librarian
+X-Correlation-ID: {{correlationId}}
+
+{
+  "name": "Alex Reader",
+  "email": "alex.reader@example.com"
+}
+
+### Get user loan history
+GET {{ApiEmprestimos.Api_HostAddress}}/users/{{userId}}/loans
+
+### Create a loan
+POST {{ApiEmprestimos.Api_HostAddress}}/loans
+Content-Type: application/json
+Idempotency-Key: 9f19379b-3643-4eec-9db1-5306de5bc882
+X-Actor: reader
+X-Correlation-ID: {{correlationId}}
+
+{
+  "bookId": "{{bookId}}",
+  "userId": "{{userId}}",
+  "loanDateUtc": "2026-10-20T00:00:00Z",
+  "dueDateUtc": "2026-11-03T00:00:00Z"
+}
+
+### Return a loan
+POST {{ApiEmprestimos.Api_HostAddress}}/loans/{{loanId}}/return
+X-Actor: librarian
+X-Correlation-ID: {{correlationId}}
+
+### Cancel a loan
+POST {{ApiEmprestimos.Api_HostAddress}}/loans/{{loanId}}/cancel
+X-Actor: librarian
+X-Correlation-ID: {{correlationId}}
+
+### Get book loan history
+GET {{ApiEmprestimos.Api_HostAddress}}/books/{{bookId}}/history
+
+### Example not-found response
+GET {{ApiEmprestimos.Api_HostAddress}}/books/99999999-9999-9999-9999-999999999999

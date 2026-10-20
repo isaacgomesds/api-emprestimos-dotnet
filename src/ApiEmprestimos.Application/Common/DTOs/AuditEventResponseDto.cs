@@ -1,5 +1,6 @@
 namespace ApiEmprestimos.Application.Common.DTOs;
 
+/// <summary>Represents an audit event returned by the application.</summary>
 public sealed record AuditEventResponseDto(
     Guid Id,
     string EntityName,

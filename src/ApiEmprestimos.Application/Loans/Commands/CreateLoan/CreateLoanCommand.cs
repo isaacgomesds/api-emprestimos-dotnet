@@ -8,5 +8,6 @@ public sealed record CreateLoanCommand(
     Guid UserId,
     DateTime LoanDateUtc,
     DateTime DueDateUtc,
+    string IdempotencyKey,
     string Actor,
     string CorrelationId) : IRequest<LoanResponseDto>;

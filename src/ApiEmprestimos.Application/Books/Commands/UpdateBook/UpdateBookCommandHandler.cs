@@ -17,8 +17,15 @@ public sealed class UpdateBookCommandHandler(
         var book = await bookRepository.GetByIdAsync(request.Id, cancellationToken)
             ?? throw new KeyNotFoundException($"Book '{request.Id}' was not found.");
 
-        book.UpdateDetails(request.Title, request.Author);
-        book.UpdateStock(request.TotalCopies);
+        if (request.Title is not null || request.Author is not null)
+        {
+            book.UpdateDetails(request.Title ?? book.Title, request.Author ?? book.Author);
+        }
+
+        if (request.TotalCopies is not null)
+        {
+            book.UpdateStock(request.TotalCopies.Value);
+        }
         await bookRepository.UpdateAsync(book, cancellationToken);
         await auditEventRepository.LogAsync(
             AuditEventFactory.Create(
