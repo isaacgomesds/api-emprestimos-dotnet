@@ -11,6 +11,8 @@ public interface ILoanRepository
         CancellationToken cancellationToken = default);
     Task<bool> HasActiveLoansForUserAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<bool> HasActiveLoansForBookAsync(Guid bookId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Loan>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Loan>> GetByBookIdAsync(Guid bookId, CancellationToken cancellationToken = default);
     Task RegisterAsync(Loan loan, CancellationToken cancellationToken = default);
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -34,6 +34,24 @@ public sealed class LoanRepository(LibraryDbContext dbContext) : ILoanRepository
             loan => loan.BookId == bookId && loan.Status == LoanStatus.Active,
             cancellationToken);
 
+    public async Task<IReadOnlyList<Loan>> GetByUserIdAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default) =>
+        await dbContext.Loans
+            .AsNoTracking()
+            .Where(loan => loan.UserId == userId)
+            .OrderByDescending(loan => loan.LoanDateUtc)
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<Loan>> GetByBookIdAsync(
+        Guid bookId,
+        CancellationToken cancellationToken = default) =>
+        await dbContext.Loans
+            .AsNoTracking()
+            .Where(loan => loan.BookId == bookId)
+            .OrderByDescending(loan => loan.LoanDateUtc)
+            .ToListAsync(cancellationToken);
+
     public async Task RegisterAsync(Loan loan, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(loan);
