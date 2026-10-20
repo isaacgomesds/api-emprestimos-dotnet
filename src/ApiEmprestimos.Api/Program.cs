@@ -1,4 +1,5 @@
 using ApiEmprestimos.Infrastructure.Data;
+using ApiEmprestimos.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddDbContext<LibraryDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("LibraryDatabase")));
+builder.Services.AddInfrastructure();
 
 var app = builder.Build();
 
