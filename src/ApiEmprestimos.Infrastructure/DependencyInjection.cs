@@ -2,6 +2,7 @@ using ApiEmprestimos.Domain.Repositories;
 using ApiEmprestimos.Infrastructure.Data;
 using ApiEmprestimos.Infrastructure.Repositories;
 using Microsoft.Extensions.DependencyInjection;
+using ApiEmprestimos.Infrastructure.HealthChecks;
 
 namespace ApiEmprestimos.Infrastructure;
 
@@ -14,6 +15,9 @@ public static class DependencyInjection
         services.AddScoped<ILoanRepository, LoanRepository>();
         services.AddScoped<IAuditEventRepository, AuditEventRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddHealthChecks()
+            .AddCheck<PostgreSqlHealthCheck>("postgresql", tags: ["ready"])
+            .AddCheck<RedisHealthCheck>("redis", tags: ["ready"]);
 
         return services;
     }

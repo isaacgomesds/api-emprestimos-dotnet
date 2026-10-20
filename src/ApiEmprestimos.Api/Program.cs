@@ -6,6 +6,12 @@ using ApiEmprestimos.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 using StackExchange.Redis;
+using ApiEmprestimos.Infrastructure.HealthChecks;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +20,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => HealthCheckResult.Healthy(), tags: ["live"]);
 var redisConnectionString = builder.Configuration["Redis:ConnectionString"] ?? "127.0.0.1:6379";
 builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
 {
@@ -35,6 +43,27 @@ builder.Services.AddDbContext<LibraryDbContext>(options =>
     options.UseNpgsql(connectionString));
 builder.Services.AddInfrastructure();
 
+var serviceName = builder.Configuration["OpenTelemetry:ServiceName"] ?? "ApiEmprestimos.Api";
+var otlpEndpoint = builder.Configuration["OpenTelemetry:Otlp:Endpoint"]
+    ?? builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
+var openTelemetry = builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService(serviceName))
+    .WithTracing(tracing => tracing
+        .AddAspNetCoreInstrumentation()
+        .AddEntityFrameworkCoreInstrumentation()
+        .AddRedisInstrumentation())
+    .WithMetrics(metrics => metrics
+        .AddAspNetCoreInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddMeter(DependencyHealthMetrics.MeterName)
+        .AddPrometheusExporter());
+
+if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+{
+    openTelemetry.WithTracing(tracing => tracing.AddOtlpExporter());
+    openTelemetry.WithMetrics(metrics => metrics.AddOtlpExporter());
+}
+
 var app = builder.Build();
 
 app.UseExceptionHandler();
@@ -52,6 +81,8 @@ app.UseHttpsRedirection();
 app.MapBookEndpoints();
 app.MapUserEndpoints();
 app.MapLoanEndpoints();
+app.MapHealthEndpoints();
+app.MapPrometheusScrapingEndpoint().DisableHttpMetrics();
 
 app.Run();
 

@@ -68,6 +68,14 @@ public sealed class ApiIntegrationFixture : IAsyncLifetime
         await redis.GetDatabase().ExecuteAsync("FLUSHDB");
     }
 
+    public Task StopPostgreSqlAsync() => _postgres.StopAsync();
+
+    public Task StartPostgreSqlAsync() => _postgres.StartAsync();
+
+    public Task StopRedisAsync() => _redis.StopAsync();
+
+    public Task StartRedisAsync() => _redis.StartAsync();
+
     public async Task DisposeAsync()
     {
         Client?.Dispose();
