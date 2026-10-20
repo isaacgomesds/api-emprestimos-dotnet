@@ -54,3 +54,7 @@ app.MapUserEndpoints();
 app.MapLoanEndpoints();
 
 app.Run();
+
+public partial class Program
+{
+}
