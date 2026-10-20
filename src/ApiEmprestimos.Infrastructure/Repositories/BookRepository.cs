@@ -26,6 +26,15 @@ public sealed class BookRepository(LibraryDbContext dbContext) : IBookRepository
             .Where(book => book.IsActive)
             .ToListAsync(cancellationToken);
 
+    public async Task<bool> TryReserveCopyAsync(
+        Guid id,
+        CancellationToken cancellationToken = default) =>
+        await dbContext.Books
+            .Where(book => book.Id == id && book.IsActive && book.AvailableCopies > 0)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(book => book.AvailableCopies, book => book.AvailableCopies - 1),
+                cancellationToken) == 1;
+
     public async Task AddAsync(Book book, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(book);

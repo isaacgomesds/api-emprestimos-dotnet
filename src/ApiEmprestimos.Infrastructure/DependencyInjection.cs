@@ -1,4 +1,5 @@
 using ApiEmprestimos.Domain.Repositories;
+using ApiEmprestimos.Infrastructure.Data;
 using ApiEmprestimos.Infrastructure.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,6 +13,7 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ILoanRepository, LoanRepository>();
         services.AddScoped<IAuditEventRepository, AuditEventRepository>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
     }
