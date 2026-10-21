@@ -155,6 +155,40 @@ public sealed class LoanApiIntegrationTests(ApiIntegrationFixture fixture)
         state.LoanCount.Should().Be(1);
     }
 
+    [Fact]
+    public async Task Get_user_loan_history_includes_book_details()
+    {
+        var (bookId, userId) = await SeedBookAndUserAsync(availableCopies: 1);
+        var bookDetails = await GetBookDetailsAsync(bookId);
+        var loanDate = DateTimeOffset.UtcNow;
+        using var createResponse = await SendLoanRequestAsync(
+            new
+            {
+                BookId = bookId,
+                UserId = userId,
+                LoanDateUtc = loanDate,
+                DueDateUtc = loanDate.AddDays(14)
+            },
+            $"loan-history-{Guid.NewGuid():N}");
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        using var historyResponse = await Client.GetAsync($"/users/{userId}/loans");
+        historyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var history = await historyResponse.Content
+            .ReadFromJsonAsync<List<UserLoanHistoryResponseDto>>(LoanJsonOptions);
+
+        history.Should().ContainSingle().Which.Should().BeEquivalentTo(
+            new
+            {
+                BookId = bookId,
+                BookTitle = bookDetails.Title,
+                BookAuthor = bookDetails.Author,
+                Isbn = bookDetails.Isbn,
+                UserId = userId
+            },
+            options => options.ExcludingMissingMembers());
+    }
+
     private Task<HttpResponseMessage> SendLoanRequestAsync<TRequest>(TRequest request, string idempotencyKey)
     {
         return Client.SendAsync(CreateLoanRequest(request, idempotencyKey));

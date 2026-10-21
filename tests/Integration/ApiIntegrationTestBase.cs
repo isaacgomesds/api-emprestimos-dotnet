@@ -47,4 +47,12 @@ public abstract class ApiIntegrationTestBase(ApiIntegrationFixture fixture) : IA
         var loanCount = await dbContext.Loans.CountAsync(loan => loan.BookId == bookId);
         return (book.AvailableCopies, loanCount);
     }
+
+    protected async Task<(string Title, string Author, string Isbn)> GetBookDetailsAsync(Guid bookId)
+    {
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LibraryDbContext>();
+        var book = await dbContext.Books.SingleAsync(candidate => candidate.Id == bookId);
+        return (book.Title, book.Author, book.Isbn);
+    }
 }

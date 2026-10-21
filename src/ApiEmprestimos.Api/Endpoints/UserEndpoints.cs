@@ -32,7 +32,7 @@ public static class UserEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
-        group.MapGet("/{id:guid}/loans", async Task<Ok<IReadOnlyList<LoanResponseDto>>> (
+        group.MapGet("/{id:guid}/loans", async Task<Ok<IReadOnlyList<UserLoanHistoryResponseDto>>> (
                 Guid id,
                 ISender sender,
                 CancellationToken cancellationToken) =>

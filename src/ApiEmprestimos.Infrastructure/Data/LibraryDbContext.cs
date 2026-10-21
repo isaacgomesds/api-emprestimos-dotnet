@@ -160,7 +160,7 @@ public sealed class LibraryDbContext(DbContextOptions<LibraryDbContext> options)
             entity.ToTable("Loans");
             entity.HasKey(loan => loan.Id);
             entity.Property(loan => loan.Status).HasConversion<string>().HasMaxLength(20);
-            entity.HasOne<Book>()
+            entity.HasOne(loan => loan.Book)
                 .WithMany()
                 .HasForeignKey(loan => loan.BookId)
                 .OnDelete(DeleteBehavior.Restrict);
