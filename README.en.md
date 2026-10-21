@@ -50,6 +50,22 @@ Main endpoints:
 - `GET /metrics`
 - `POST /loans` (requires `Idempotency-Key` header)
 
+## Sample Seed Data
+
+The database is migrated automatically when the API starts and includes the following data for testing:
+
+**Books**
+
+- `11111111-1111-1111-1111-111111111111` — The Hobbit
+- `11111111-1111-1111-1111-111111111112` — Pride and Prejudice
+- `11111111-1111-1111-1111-111111111113` — Nineteen Eighty-Four
+
+**Users**
+
+- `22222222-2222-2222-2222-222222222222` — Standard User
+- `22222222-2222-2222-2222-222222222223` — Administrator
+- `22222222-2222-2222-2222-222222222224` — Librarian
+
 ## Migrations and Tests
 
 ### EF Core Migrations

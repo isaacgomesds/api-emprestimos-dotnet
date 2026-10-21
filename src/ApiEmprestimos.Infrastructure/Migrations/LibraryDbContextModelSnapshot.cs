@@ -103,6 +103,108 @@ namespace ApiEmprestimos.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Books", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("11111111-1111-1111-1111-111111111111"),
+                            Author = "J.R.R. Tolkien",
+                            AvailableCopies = 4,
+                            IsActive = true,
+                            Isbn = "9780547928227",
+                            Title = "The Hobbit",
+                            TotalCopies = 4
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-1111-1111-1111-111111111112"),
+                            Author = "Jane Austen",
+                            AvailableCopies = 3,
+                            IsActive = true,
+                            Isbn = "9780141439518",
+                            Title = "Pride and Prejudice",
+                            TotalCopies = 3
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-1111-1111-1111-111111111113"),
+                            Author = "George Orwell",
+                            AvailableCopies = 5,
+                            IsActive = true,
+                            Isbn = "9780451524935",
+                            Title = "Nineteen Eighty-Four",
+                            TotalCopies = 5
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-1111-1111-1111-111111111114"),
+                            Author = "F. Scott Fitzgerald",
+                            AvailableCopies = 3,
+                            IsActive = true,
+                            Isbn = "9780743273565",
+                            Title = "The Great Gatsby",
+                            TotalCopies = 3
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-1111-1111-1111-111111111115"),
+                            Author = "Harper Lee",
+                            AvailableCopies = 4,
+                            IsActive = true,
+                            Isbn = "9780061120084",
+                            Title = "To Kill a Mockingbird",
+                            TotalCopies = 4
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-1111-1111-1111-111111111116"),
+                            Author = "Frank Herbert",
+                            AvailableCopies = 2,
+                            IsActive = true,
+                            Isbn = "9780441172719",
+                            Title = "Dune",
+                            TotalCopies = 2
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-1111-1111-1111-111111111117"),
+                            Author = "J.D. Salinger",
+                            AvailableCopies = 3,
+                            IsActive = true,
+                            Isbn = "9780316769488",
+                            Title = "The Catcher in the Rye",
+                            TotalCopies = 3
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-1111-1111-1111-111111111118"),
+                            Author = "Gabriel Garcia Marquez",
+                            AvailableCopies = 2,
+                            IsActive = true,
+                            Isbn = "9780060883287",
+                            Title = "One Hundred Years of Solitude",
+                            TotalCopies = 2
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-1111-1111-1111-111111111119"),
+                            Author = "Umberto Eco",
+                            AvailableCopies = 2,
+                            IsActive = true,
+                            Isbn = "9780156001311",
+                            Title = "The Name of the Rose",
+                            TotalCopies = 2
+                        },
+                        new
+                        {
+                            Id = new Guid("11111111-1111-1111-1111-111111111120"),
+                            Author = "J.R.R. Tolkien",
+                            AvailableCopies = 4,
+                            IsActive = true,
+                            Isbn = "9780547928210",
+                            Title = "The Fellowship of the Ring",
+                            TotalCopies = 4
+                        });
                 });
 
             modelBuilder.Entity("ApiEmprestimos.Domain.Entities.IdempotentRequest", b =>
@@ -193,6 +295,29 @@ namespace ApiEmprestimos.Infrastructure.Migrations
                     b.HasIndex("Email");
 
                     b.ToTable("Users", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("22222222-2222-2222-2222-222222222222"),
+                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "standard.user@example.com",
+                            Name = "Standard User"
+                        },
+                        new
+                        {
+                            Id = new Guid("22222222-2222-2222-2222-222222222223"),
+                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "admin@example.com",
+                            Name = "Administrator"
+                        },
+                        new
+                        {
+                            Id = new Guid("22222222-2222-2222-2222-222222222224"),
+                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "librarian@example.com",
+                            Name = "Librarian"
+                        });
                 });
 
             modelBuilder.Entity("ApiEmprestimos.Domain.Entities.Loan", b =>

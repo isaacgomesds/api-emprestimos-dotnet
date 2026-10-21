@@ -2,7 +2,7 @@
     "info": {
         "_postman_id": "04c86618-38c6-43bb-9e21-669e0d2021f8",
         "name": "ApiEmprestimos",
-        "description": "Collection for the Library API. Run Create Book and Create User before creating a loan. The create requests store their returned IDs in collection variables. Return Loan and Cancel Loan are alternative actions for a loan.",
+        "description": "Collection for the Library API. The default bookId and userId refer to seeded data. Create Book and Create User are optional and store their returned IDs in collection variables. Create a loan before using Return Loan or Cancel Loan; these are alternative actions for a loan.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "variable": [
@@ -18,7 +18,7 @@
         },
         {
             "key": "actor",
-            "value": "librarian",
+            "value": "22222222-2222-2222-2222-222222222224",
             "type": "string"
         },
         {

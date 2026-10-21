@@ -52,6 +52,22 @@ Endpoints principais:
 - `GET /metrics`
 - `POST /loans` (com cabeçalho `Idempotency-Key`)
 
+## Dados de exemplo
+
+O banco é migrado automaticamente ao iniciar a API e inclui estes dados para testes:
+
+**Livros**
+
+- `11111111-1111-1111-1111-111111111111` — The Hobbit
+- `11111111-1111-1111-1111-111111111112` — Pride and Prejudice
+- `11111111-1111-1111-1111-111111111113` — Nineteen Eighty-Four
+
+**Usuários**
+
+- `22222222-2222-2222-2222-222222222222` — Standard User
+- `22222222-2222-2222-2222-222222222223` — Administrator
+- `22222222-2222-2222-2222-222222222224` — Librarian
+
 ## Migrations e Testes
 
 ### EF Core Migrations
