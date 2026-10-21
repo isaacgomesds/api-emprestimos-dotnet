@@ -389,7 +389,7 @@
                             },
                             {
                                 "key": "Idempotency-Key",
-                                "value": "{{idempotencyKey}}",
+                                "value": "{{$guid}}",
                                 "description": "Use the same key when retrying the same loan request."
                             },
                             {
