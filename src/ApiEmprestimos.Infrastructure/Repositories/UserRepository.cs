@@ -7,6 +7,13 @@ namespace ApiEmprestimos.Infrastructure.Repositories;
 
 public sealed class UserRepository(LibraryDbContext dbContext) : IUserRepository
 {
+    public async Task<IReadOnlyList<User>> GetAllAsync(CancellationToken cancellationToken = default) =>
+        await dbContext.Users
+            .AsNoTracking()
+            .OrderBy(user => user.Name)
+            .ThenBy(user => user.Id)
+            .ToListAsync(cancellationToken);
+
     public Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         dbContext.Users.SingleOrDefaultAsync(user => user.Id == id, cancellationToken);
 

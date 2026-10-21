@@ -180,6 +180,42 @@
             "name": "Users",
             "item": [
                 {
+                    "name": "List Users",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/users",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["users"]
+                        },
+                        "description": "Returns all users with their ID, name, email, and creation timestamp."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('List users returns HTTP 200 and an array', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "    pm.expect(pm.response.json()).to.be.an('array');",
+                                    "});",
+                                    "",
+                                    "pm.test('Each user includes identity and creation details', function () {",
+                                    "    pm.response.json().forEach(function (user) {",
+                                    "        pm.expect(user).to.have.property('id').that.is.a('string');",
+                                    "        pm.expect(user).to.have.property('name').that.is.a('string').and.not.empty;",
+                                    "        pm.expect(user).to.have.property('email').that.is.a('string').and.not.empty;",
+                                    "        pm.expect(user).to.have.property('createdAtUtc').that.is.a('string');",
+                                    "    });",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
                     "name": "Create User",
                     "request": {
                         "method": "POST",

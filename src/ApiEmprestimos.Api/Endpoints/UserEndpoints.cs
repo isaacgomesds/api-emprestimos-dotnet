@@ -1,5 +1,6 @@
 using ApiEmprestimos.Application.Common.DTOs;
 using ApiEmprestimos.Application.Users.Commands.CreateUser;
+using ApiEmprestimos.Application.Users.Queries.GetAllUsers;
 using ApiEmprestimos.Application.Users.Queries.GetUserLoanHistory;
 using MediatR;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -11,6 +12,13 @@ public static class UserEndpoints
     public static IEndpointRouteBuilder MapUserEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("/users").WithTags("Users");
+
+        group.MapGet("/", async Task<Ok<IReadOnlyList<UserResponseDto>>> (
+                ISender sender,
+                CancellationToken cancellationToken) =>
+            TypedResults.Ok(await sender.Send(new GetAllUsersQuery(), cancellationToken)))
+            .WithName("GetAllUsers")
+            .WithSummary("Get all users");
 
         group.MapPost("/", async Task<Created<UserResponseDto>> (
                 CreateUserRequest request,

@@ -38,6 +38,9 @@ DELETE {{ApiEmprestimos.Api_HostAddress}}/books/{{bookId}}
 X-Actor: librarian
 X-Correlation-ID: {{correlationId}}
 
+### List users
+GET {{ApiEmprestimos.Api_HostAddress}}/users
+
 ### Create a user
 POST {{ApiEmprestimos.Api_HostAddress}}/users
 Content-Type: application/json

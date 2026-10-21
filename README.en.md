@@ -45,6 +45,9 @@ The API will be available at:
 
 Main endpoints:
 
+- `GET /users` (lists all users with their ID, name, email, and creation timestamp)
+- `POST /users` (creates a user)
+- `GET /users/{id}/loans` (gets a user's loan history)
 - `GET /health/live`
 - `GET /health/ready`
 - `GET /metrics`
