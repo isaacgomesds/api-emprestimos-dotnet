@@ -28,6 +28,12 @@ A aplicação expõe endpoints de catálogo, usuários, empréstimos, health che
 
 ### Executar localmente
 
+1. Clone o repositório e navegue até a pasta do projeto:
+```bash
+git clone https://github.com/isaacgomesds/api-emprestimos-dotnet.git
+cd api-emprestimos-dotnet
+```
+
 Crie um arquivo `.env` com as variáveis esperadas pelo Compose (exemplo: `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`).
 
 ```bash

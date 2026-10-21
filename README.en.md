@@ -26,6 +26,12 @@ The application exposes endpoints for books, users, loans, health checks, metric
 
 ### Run locally
 
+1. Clone the repository and navigate to the project folder:
+```bash
+git clone https://github.com/isaacgomesds/api-emprestimos-dotnet.git
+cd api-emprestimos-dotnet
+```
+
 Create a `.env` file with the variables expected by Compose (for example: `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`).
 
 ```bash
