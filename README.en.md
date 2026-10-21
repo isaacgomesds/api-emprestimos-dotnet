@@ -32,6 +32,20 @@ git clone https://github.com/isaacgomesds/api-emprestimos-dotnet.git
 cd api-emprestimos-dotnet
 ```
 
+As an automated alternative to the manual steps below, run the script from the repository root:
+
+```bash
+./setup.sh
+```
+
+On Windows PowerShell, use:
+
+```powershell
+.\setup.ps1
+```
+
+The script creates `.env` from `.env.example` if needed and runs `docker compose up -d --build`. The API will be available at `http://localhost:5000`.
+
 2. Copy `.env.example` to `.env` before running Docker Compose:
 
 ```bash
