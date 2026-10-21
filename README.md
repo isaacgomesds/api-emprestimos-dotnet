@@ -106,6 +106,10 @@ dotnet test
 
 A suíte cobre testes unitários, testes de integração com PostgreSQL e Redis em containers, cenário de concorrência para o último exemplar e idempotência de empréstimos.
 
+### Coleção Postman
+
+Com a API em execução, importe `postman/ApiEmprestimos.postman_collection.json` pelo menu **Import** do Postman. A coleção usa `http://localhost:5000` por padrão; ajuste a variável `baseUrl` da coleção se a API estiver em outro endereço e execute as requisições desejadas.
+
 ## Variáveis de Ambiente
 
 Consulte o arquivo `.env.example` para referência de configuração. A estrutura de variáveis esperada inclui, ao menos:

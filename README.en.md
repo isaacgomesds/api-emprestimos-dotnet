@@ -104,6 +104,10 @@ dotnet test
 
 The suite covers unit tests, integration tests with PostgreSQL and Redis in containers, concurrent allocation tests for the last available copy, and the idempotency flow for loan creation.
 
+### Postman Collection
+
+With the API running, import `postman/ApiEmprestimos.postman_collection.json` from the repository root using Postman's **Import** menu. The collection uses `http://localhost:5000` by default; update the collection's `baseUrl` variable if the API is running at a different address, then run the requests you need.
+
 ## Environment Variables
 
 Check `.env.example` for configuration reference. The expected variables include:
