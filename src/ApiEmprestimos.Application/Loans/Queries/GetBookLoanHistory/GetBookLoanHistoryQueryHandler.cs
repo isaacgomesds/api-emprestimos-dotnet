@@ -6,9 +6,9 @@ namespace ApiEmprestimos.Application.Loans.Queries.GetBookLoanHistory;
 
 public sealed class GetBookLoanHistoryQueryHandler(
     IBookRepository bookRepository,
-    ILoanRepository loanRepository) : IRequestHandler<GetBookLoanHistoryQuery, IReadOnlyList<LoanResponseDto>>
+    ILoanRepository loanRepository) : IRequestHandler<GetBookLoanHistoryQuery, IReadOnlyList<BookLoanHistoryResponseDto>>
 {
-    public async Task<IReadOnlyList<LoanResponseDto>> Handle(
+    public async Task<IReadOnlyList<BookLoanHistoryResponseDto>> Handle(
         GetBookLoanHistoryQuery request,
         CancellationToken cancellationToken)
     {
@@ -18,10 +18,12 @@ public sealed class GetBookLoanHistoryQueryHandler(
         }
 
         var loans = await loanRepository.GetByBookIdAsync(request.BookId, cancellationToken);
-        return loans.Select(loan => new LoanResponseDto(
+        return loans.Select(loan => new BookLoanHistoryResponseDto(
             loan.Id,
             loan.BookId,
             loan.UserId,
+            loan.User.Name,
+            loan.User.Email,
             loan.LoanDateUtc,
             loan.DueDateUtc,
             loan.ReturnDateUtc,

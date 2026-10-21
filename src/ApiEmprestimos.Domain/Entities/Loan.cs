@@ -14,6 +14,7 @@ public sealed class Loan
     public DateTime? ReturnDateUtc { get; private set; }
     public LoanStatus Status { get; private set; }
     public Book Book { get; private set; } = null!;
+    public User User { get; private set; } = null!;
 
     public static Loan Create(Guid bookId, Guid userId, DateTime loanDateUtc, DateTime dueDateUtc)
     {

@@ -49,6 +49,7 @@ public sealed class LoanRepository(LibraryDbContext dbContext) : ILoanRepository
         CancellationToken cancellationToken = default) =>
         await dbContext.Loans
             .AsNoTracking()
+            .Include(loan => loan.User)
             .Where(loan => loan.BookId == bookId)
             .OrderByDescending(loan => loan.LoanDateUtc)
             .ToListAsync(cancellationToken);

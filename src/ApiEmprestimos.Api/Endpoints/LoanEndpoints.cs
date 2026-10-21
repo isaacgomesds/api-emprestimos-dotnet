@@ -84,7 +84,7 @@ public static class LoanEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         var books = endpoints.MapGroup("/books").WithTags("Loans");
-        books.MapGet("/{id:guid}/history", async Task<Ok<IReadOnlyList<LoanResponseDto>>> (
+        books.MapGet("/{id:guid}/history", async Task<Ok<IReadOnlyList<BookLoanHistoryResponseDto>>> (
                 Guid id,
                 ISender sender,
                 CancellationToken cancellationToken) =>

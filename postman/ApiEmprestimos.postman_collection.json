@@ -448,7 +448,28 @@
                             "host": ["{{baseUrl}}"],
                             "path": ["books", "{{bookId}}", "history"]
                         }
-                    }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Book loan history returns HTTP 200 and an array', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "    pm.expect(pm.response.json()).to.be.an('array');",
+                                    "});",
+                                    "",
+                                    "pm.test('Each loan includes borrower name and email', function () {",
+                                    "    pm.response.json().forEach(function (loan) {",
+                                    "        pm.expect(loan).to.have.property('userName').that.is.a('string').and.not.empty;",
+                                    "        pm.expect(loan).to.have.property('userEmail').that.is.a('string').and.not.empty;",
+                                    "    });",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
                 }
             ]
         }

@@ -164,7 +164,7 @@ public sealed class LibraryDbContext(DbContextOptions<LibraryDbContext> options)
                 .WithMany()
                 .HasForeignKey(loan => loan.BookId)
                 .OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne<User>()
+            entity.HasOne(loan => loan.User)
                 .WithMany()
                 .HasForeignKey(loan => loan.UserId)
                 .OnDelete(DeleteBehavior.Restrict);

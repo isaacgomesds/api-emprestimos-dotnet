@@ -55,4 +55,12 @@ public abstract class ApiIntegrationTestBase(ApiIntegrationFixture fixture) : IA
         var book = await dbContext.Books.SingleAsync(candidate => candidate.Id == bookId);
         return (book.Title, book.Author, book.Isbn);
     }
+
+    protected async Task<(string Name, string Email)> GetUserDetailsAsync(Guid userId)
+    {
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LibraryDbContext>();
+        var user = await dbContext.Users.SingleAsync(candidate => candidate.Id == userId);
+        return (user.Name, user.Email);
+    }
 }
