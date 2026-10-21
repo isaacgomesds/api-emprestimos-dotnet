@@ -43,6 +43,6 @@ public static class HealthEndpoints
                 description = entry.Value.Description,
                 duration = entry.Value.Duration.TotalMilliseconds
             })
-        });
+        }, context.RequestAborted);
     }
 }

@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace ApiEmprestimos.Api.Middleware;
 
@@ -34,18 +35,23 @@ internal sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) :
                 .GroupBy(error => error.PropertyName)
                 .ToDictionary(group => group.Key, group => group.Select(error => error.ErrorMessage).ToArray());
 
-            await httpContext.Response.WriteAsJsonAsync(
+            httpContext.Response.ContentType = "application/problem+json";
+            await JsonSerializer.SerializeAsync(
+                httpContext.Response.Body,
                 new ValidationProblemDetails(errors)
                 {
                     Status = statusCode,
                     Title = title,
                     Instance = httpContext.Request.Path
                 },
+                JsonSerializerOptions.Web,
                 cancellationToken);
             return true;
         }
 
-        await httpContext.Response.WriteAsJsonAsync(
+        httpContext.Response.ContentType = "application/problem+json";
+        await JsonSerializer.SerializeAsync(
+            httpContext.Response.Body,
             new ProblemDetails
             {
                 Status = statusCode,
@@ -53,6 +59,7 @@ internal sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) :
                 Detail = statusCode == StatusCodes.Status409Conflict ? exception.Message : title,
                 Instance = httpContext.Request.Path
             },
+            JsonSerializerOptions.Web,
             cancellationToken);
         return true;
     }

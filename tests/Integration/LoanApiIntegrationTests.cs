@@ -86,6 +86,34 @@ public sealed class LoanApiIntegrationTests(ApiIntegrationFixture fixture)
     }
 
     [Fact]
+    public async Task Idempotency_result_survives_redis_cache_loss()
+    {
+        var (bookId, userId) = await SeedBookAndUserAsync(availableCopies: 2);
+        var requestBody = new
+        {
+            BookId = bookId,
+            UserId = userId,
+            LoanDateUtc = DateTimeOffset.UtcNow,
+            DueDateUtc = DateTimeOffset.UtcNow.AddDays(14)
+        };
+        var idempotencyKey = $"loan-durable-replay-{Guid.NewGuid():N}";
+
+        using var firstResponse = await SendLoanRequestAsync(requestBody, idempotencyKey);
+        firstResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var firstBody = await firstResponse.Content.ReadAsStringAsync();
+
+        await FlushRedisAsync();
+
+        using var replayResponse = await SendLoanRequestAsync(requestBody, idempotencyKey);
+        replayResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        (await replayResponse.Content.ReadAsStringAsync()).Should().Be(firstBody);
+
+        var state = await GetBookStateAsync(bookId);
+        state.AvailableCopies.Should().Be(1);
+        state.LoanCount.Should().Be(1);
+    }
+
+    [Fact]
     public async Task Concurrent_requests_with_the_same_idempotency_key_create_only_one_loan()
     {
         var (bookId, userId) = await SeedBookAndUserAsync(availableCopies: 2);
@@ -147,6 +175,7 @@ public sealed class LoanApiIntegrationTests(ApiIntegrationFixture fixture)
 
         firstResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         secondResponse.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        secondResponse.Content.Headers.ContentType?.MediaType.Should().Be("application/problem+json");
         var problem = await secondResponse.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
         problem!.Detail.Should().Contain("Idempotency-Key");
 

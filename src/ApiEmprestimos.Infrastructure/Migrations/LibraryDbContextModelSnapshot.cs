@@ -221,6 +221,11 @@ namespace ApiEmprestimos.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("ResponseBody")
                         .IsRequired()
                         .HasColumnType("text");

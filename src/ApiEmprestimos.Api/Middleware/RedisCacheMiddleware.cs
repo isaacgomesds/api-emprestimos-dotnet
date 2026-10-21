@@ -134,7 +134,9 @@ public sealed class RedisCacheMiddleware(
         {
             logger.LogWarning("Idempotency key is still being processed.");
             context.Response.StatusCode = StatusCodes.Status409Conflict;
-            await context.Response.WriteAsJsonAsync(
+            context.Response.ContentType = "application/problem+json";
+            await JsonSerializer.SerializeAsync(
+                context.Response.Body,
                 new ProblemDetails
                 {
                     Status = StatusCodes.Status409Conflict,
@@ -142,6 +144,7 @@ public sealed class RedisCacheMiddleware(
                     Detail = "A request with this Idempotency-Key is still being processed.",
                     Instance = context.Request.Path
                 },
+                JsonSerializerOptions.Web,
                 context.RequestAborted);
             return;
         }

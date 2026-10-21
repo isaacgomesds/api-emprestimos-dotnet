@@ -188,6 +188,7 @@ public sealed class LibraryDbContext(DbContextOptions<LibraryDbContext> options)
             entity.ToTable("IdempotentRequests");
             entity.HasKey(request => request.Id);
             entity.Property(request => request.Key).IsRequired().HasMaxLength(200);
+            entity.Property(request => request.RequestHash).IsRequired().HasMaxLength(64);
             entity.Property(request => request.ResponseBody).IsRequired().HasColumnType("text");
             entity.HasIndex(request => request.Key).IsUnique();
         });

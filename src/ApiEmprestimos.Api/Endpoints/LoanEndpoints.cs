@@ -19,6 +19,7 @@ public static class LoanEndpoints
                 [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
                 HttpContext httpContext,
                 ISender sender,
+                ILogger<Program> logger,
                 CancellationToken cancellationToken) =>
             {
                 var normalizedIdempotencyKey = idempotencyKey?.Trim();
@@ -32,6 +33,7 @@ public static class LoanEndpoints
                     throw new ArgumentException("The Idempotency-Key header cannot exceed 200 characters.");
                 }
 
+                var correlationId = RequestMetadata.GetCorrelationId(httpContext);
                 var loan = await sender.Send(
                     new CreateLoanCommand(
                         request.BookId,
@@ -40,8 +42,14 @@ public static class LoanEndpoints
                         request.DueDateUtc.UtcDateTime,
                         normalizedIdempotencyKey,
                         RequestMetadata.GetActor(httpContext),
-                        RequestMetadata.GetCorrelationId(httpContext)),
+                        correlationId),
                     cancellationToken);
+                logger.LogInformation(
+                    "Loan request resolved to {LoanId} for book {BookId} and user {UserId}; correlationId {CorrelationId}",
+                    loan.Id,
+                    loan.BookId,
+                    loan.UserId,
+                    correlationId);
                 return TypedResults.Created($"/loans/{loan.Id}", loan);
             })
             .WithName("CreateLoan")

@@ -24,7 +24,7 @@ The application exposes endpoints for books, users, loans, health checks, metric
 - Docker + Docker Compose
 - PostgreSQL and Redis running locally or via Compose
 
-### Run locally
+### Run with Docker Compose
 
 1. Clone the repository and navigate to the project folder:
 ```bash
@@ -32,10 +32,22 @@ git clone https://github.com/isaacgomesds/api-emprestimos-dotnet.git
 cd api-emprestimos-dotnet
 ```
 
-Create a `.env` file with the variables expected by Compose (for example: `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`).
+2. Copy `.env.example` to `.env` before running Docker Compose:
 
 ```bash
-docker compose up -d
+# Linux/macOS
+cp .env.example .env
+```
+
+```powershell
+# Windows PowerShell
+Copy-Item .env.example .env
+```
+
+3. Start the services and build the API image:
+
+```bash
+docker compose up --build -d
 ```
 
 The API will be available at:
@@ -127,15 +139,15 @@ This approach avoids negative inventory and keeps the source of truth in Postgre
 
 ### Idempotency with Redis (`Idempotency-Key`)
 
-The loan creation endpoint accepts the `Idempotency-Key` header and stores the successful response in Redis using a key derived from the supplied token.
+The loan creation endpoint accepts the `Idempotency-Key` header. Redis coordinates concurrent requests and speeds up replays, while the request hash and successful response are persisted in PostgreSQL in the same transaction as the loan, stock decrement, and audit record.
 
 Repeated requests with the same key:
 
-- reuse the cached response;
+- reuse the persisted response, using Redis when available;
 - do not re-run business logic;
 - do not decrement available copies again.
 
-If the same key is reused with a different body, the API rejects the request with a conflict error, preserving safe idempotent semantics.
+A database unique constraint and conditional idempotency-record insert also serialize requests when the cache expires or an instance restarts. If the same key is reused with a different body, the API rejects the request with a conflict error.
 
 ### Read Cache and Invalidation
 

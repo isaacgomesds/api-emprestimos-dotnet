@@ -72,6 +72,7 @@ await using (var scope = app.Services.CreateAsyncScope())
     await dbContext.Database.MigrateAsync();
 }
 
+app.UseMiddleware<CorrelationLoggingMiddleware>();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseMiddleware<RedisCacheMiddleware>();

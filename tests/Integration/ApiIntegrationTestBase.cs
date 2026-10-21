@@ -15,6 +15,12 @@ public abstract class ApiIntegrationTestBase(ApiIntegrationFixture fixture) : IA
 
     public Task DisposeAsync() => Task.CompletedTask;
 
+    protected async Task FlushRedisAsync()
+    {
+        var redis = fixture.Services.GetRequiredService<StackExchange.Redis.IConnectionMultiplexer>();
+        await redis.GetDatabase().ExecuteAsync("FLUSHDB");
+    }
+
     protected async Task<(Guid BookId, Guid UserId)> SeedBookAndUserAsync(int availableCopies)
     {
         var book = Book.Create("Concurrency Test Book", Guid.NewGuid().ToString("N")[..20], "Test Author", availableCopies);

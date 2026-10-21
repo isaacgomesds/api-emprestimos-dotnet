@@ -26,7 +26,7 @@ A aplicação expõe endpoints de catálogo, usuários, empréstimos, health che
 - Docker + Docker Compose
 - PostgreSQL e Redis executando localmente ou via Compose
 
-### Executar localmente
+### Executar com Docker Compose
 
 1. Clone o repositório e navegue até a pasta do projeto:
 ```bash
@@ -34,10 +34,22 @@ git clone https://github.com/isaacgomesds/api-emprestimos-dotnet.git
 cd api-emprestimos-dotnet
 ```
 
-Crie um arquivo `.env` com as variáveis esperadas pelo Compose (exemplo: `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`).
+2. Copie `.env.example` para `.env` antes de executar o Compose:
 
 ```bash
-docker compose up -d
+# Linux/macOS
+cp .env.example .env
+```
+
+```powershell
+# Windows PowerShell
+Copy-Item .env.example .env
+```
+
+3. Inicie os serviços, construindo a imagem da API:
+
+```bash
+docker compose up --build -d
 ```
 
 A API ficará disponível em:
@@ -129,15 +141,15 @@ Essa abordagem evita inventário negativo e mantém a fonte de verdade em Postgr
 
 ### Idempotência com Redis (`Idempotency-Key`)
 
-O endpoint de criação de empréstimo aceita o cabeçalho `Idempotency-Key` e armazena a resposta bem-sucedida em Redis com chave derivada da chave informada.
+O endpoint de criação de empréstimo aceita o cabeçalho `Idempotency-Key`. Redis coordena requisições concorrentes e acelera o replay, enquanto o hash da requisição e a resposta bem-sucedida são persistidos em PostgreSQL na mesma transação do empréstimo, baixa de estoque e auditoria.
 
 Requisições repetidas com a mesma chave:
 
-- reutilizam a resposta em cache;
+- reutilizam a resposta persistida, usando Redis quando disponível;
 - não reexecutam a lógica de negócio;
 - não decrementam novamente a quantidade disponível do livro.
 
-Se a mesma chave for usada com corpo diferente, a API rejeita com erro de conflito, preservando a semântica de idempotência segura.
+Uma restrição única no banco e a inserção condicional do registro idempotente serializam também os casos em que o cache expira ou uma instância reinicia. Se a mesma chave for usada com corpo diferente, a API rejeita com erro de conflito.
 
 ### Cache de leitura e invalidação
 
