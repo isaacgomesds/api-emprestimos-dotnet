@@ -9,43 +9,58 @@ namespace ApiEmprestimos.Application.Loans.Commands.CancelLoan;
 public sealed class CancelLoanCommandHandler(
     ILoanRepository loanRepository,
     IBookRepository bookRepository,
-    IAuditEventRepository auditEventRepository) : IRequestHandler<CancelLoanCommand, LoanResponseDto>
+    IAuditEventRepository auditEventRepository,
+    IUnitOfWork unitOfWork) : IRequestHandler<CancelLoanCommand, LoanResponseDto>
 {
     public async Task<LoanResponseDto> Handle(
         CancelLoanCommand request,
         CancellationToken cancellationToken)
     {
-        var loan = await loanRepository.GetByIdAsync(request.LoanId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Loan '{request.LoanId}' was not found.");
-        var book = await bookRepository.GetByIdAsync(loan.BookId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Book '{loan.BookId}' was not found.");
-
-        if (!loan.IsOpen())
+        return await unitOfWork.ExecuteInTransactionAsync(async transactionCancellationToken =>
         {
-            throw new InvalidOperationException("Only active loans can be cancelled.");
-        }
+            var loan = await loanRepository.GetByIdAsync(request.LoanId, transactionCancellationToken)
+                ?? throw new KeyNotFoundException($"Loan '{request.LoanId}' was not found.");
 
-        book.ReleaseCopy();
-        loan.Cancel();
-        await bookRepository.UpdateAsync(book, cancellationToken);
-        await auditEventRepository.LogAsync(
-            AuditEventFactory.Create(
-                nameof(Loan),
+            if (!loan.IsOpen())
+            {
+                throw new InvalidOperationException("Only active loans can be cancelled.");
+            }
+
+            loan.Cancel();
+            if (!await loanRepository.TryCloseActiveLoanAsync(
+                    loan.Id,
+                    LoanStatus.Cancelled,
+                    returnDateUtc: null,
+                    cancellationToken: transactionCancellationToken))
+            {
+                throw new InvalidOperationException("Only active loans can be cancelled.");
+            }
+
+            if (!await bookRepository.TryIncrementAvailableCopiesAsync(
+                    loan.BookId,
+                    transactionCancellationToken))
+            {
+                throw new InvalidOperationException("The book inventory cannot be incremented.");
+            }
+
+            await auditEventRepository.LogAsync(
+                AuditEventFactory.Create(
+                    nameof(Loan),
+                    loan.Id,
+                    "LoanCancelled",
+                    request.Actor,
+                    request.CorrelationId,
+                    new { loan.BookId, loan.UserId }),
+                transactionCancellationToken);
+
+            return new LoanResponseDto(
                 loan.Id,
-                "LoanCancelled",
-                request.Actor,
-                request.CorrelationId,
-                new { loan.BookId, loan.UserId }),
-            cancellationToken);
-        await loanRepository.SaveChangesAsync(cancellationToken);
-
-        return new LoanResponseDto(
-            loan.Id,
-            loan.BookId,
-            loan.UserId,
-            loan.LoanDateUtc,
-            loan.DueDateUtc,
-            loan.ReturnDateUtc,
-            loan.Status);
+                loan.BookId,
+                loan.UserId,
+                loan.LoanDateUtc,
+                loan.DueDateUtc,
+                null,
+                LoanStatus.Cancelled);
+        }, cancellationToken);
     }
 }

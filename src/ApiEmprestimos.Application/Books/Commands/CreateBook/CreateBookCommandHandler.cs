@@ -1,6 +1,7 @@
 using ApiEmprestimos.Application.Common;
 using ApiEmprestimos.Application.Common.DTOs;
 using ApiEmprestimos.Domain.Entities;
+using ApiEmprestimos.Domain.Exceptions;
 using ApiEmprestimos.Domain.Repositories;
 using MediatR;
 
@@ -16,7 +17,7 @@ public sealed class CreateBookCommandHandler(
     {
         if (await bookRepository.GetByIsbnAsync(request.Isbn, cancellationToken) is not null)
         {
-            throw new InvalidOperationException("A book with this ISBN already exists.");
+            throw new BookIsbnAlreadyExistsException();
         }
 
         var book = Book.Create(request.Title, request.Isbn, request.Author, request.TotalCopies);

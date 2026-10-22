@@ -9,43 +9,59 @@ namespace ApiEmprestimos.Application.Loans.Commands.ReturnLoan;
 public sealed class ReturnLoanCommandHandler(
     ILoanRepository loanRepository,
     IBookRepository bookRepository,
-    IAuditEventRepository auditEventRepository) : IRequestHandler<ReturnLoanCommand, LoanResponseDto>
+    IAuditEventRepository auditEventRepository,
+    IUnitOfWork unitOfWork) : IRequestHandler<ReturnLoanCommand, LoanResponseDto>
 {
     public async Task<LoanResponseDto> Handle(
         ReturnLoanCommand request,
         CancellationToken cancellationToken)
     {
-        var loan = await loanRepository.GetByIdAsync(request.LoanId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Loan '{request.LoanId}' was not found.");
-        var book = await bookRepository.GetByIdAsync(loan.BookId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Book '{loan.BookId}' was not found.");
-
-        if (!loan.IsOpen())
+        return await unitOfWork.ExecuteInTransactionAsync(async transactionCancellationToken =>
         {
-            throw new InvalidOperationException("Only active loans can be returned.");
-        }
+            var loan = await loanRepository.GetByIdAsync(request.LoanId, transactionCancellationToken)
+                ?? throw new KeyNotFoundException($"Loan '{request.LoanId}' was not found.");
 
-        book.ReleaseCopy();
-        loan.Return(DateTime.UtcNow);
-        await bookRepository.UpdateAsync(book, cancellationToken);
-        await auditEventRepository.LogAsync(
-            AuditEventFactory.Create(
-                nameof(Loan),
+            if (!loan.IsOpen())
+            {
+                throw new InvalidOperationException("Only active loans can be returned.");
+            }
+
+            var returnDateUtc = DateTime.UtcNow;
+            loan.Return(returnDateUtc);
+            if (!await loanRepository.TryCloseActiveLoanAsync(
+                    loan.Id,
+                    LoanStatus.Returned,
+                    returnDateUtc,
+                    transactionCancellationToken))
+            {
+                throw new InvalidOperationException("Only active loans can be returned.");
+            }
+
+            if (!await bookRepository.TryIncrementAvailableCopiesAsync(
+                    loan.BookId,
+                    transactionCancellationToken))
+            {
+                throw new InvalidOperationException("The book inventory cannot be incremented.");
+            }
+
+            await auditEventRepository.LogAsync(
+                AuditEventFactory.Create(
+                    nameof(Loan),
+                    loan.Id,
+                    "LoanReturned",
+                    request.Actor,
+                    request.CorrelationId,
+                    new { loan.BookId, loan.UserId, ReturnDateUtc = returnDateUtc }),
+                transactionCancellationToken);
+
+            return new LoanResponseDto(
                 loan.Id,
-                "LoanReturned",
-                request.Actor,
-                request.CorrelationId,
-                new { loan.BookId, loan.UserId, loan.ReturnDateUtc }),
-            cancellationToken);
-        await loanRepository.SaveChangesAsync(cancellationToken);
-
-        return new LoanResponseDto(
-            loan.Id,
-            loan.BookId,
-            loan.UserId,
-            loan.LoanDateUtc,
-            loan.DueDateUtc,
-            loan.ReturnDateUtc,
-            loan.Status);
+                loan.BookId,
+                loan.UserId,
+                loan.LoanDateUtc,
+                loan.DueDateUtc,
+                returnDateUtc,
+                LoanStatus.Returned);
+        }, cancellationToken);
     }
 }

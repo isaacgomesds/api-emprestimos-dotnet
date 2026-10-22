@@ -60,6 +60,31 @@ public sealed class LoanRepository(LibraryDbContext dbContext) : ILoanRepository
         await dbContext.Loans.AddAsync(loan, cancellationToken);
     }
 
+    public async Task<bool> TryCloseActiveLoanAsync(
+        Guid id,
+        LoanStatus status,
+        DateTime? returnDateUtc,
+        CancellationToken cancellationToken = default)
+    {
+        if (status is not (LoanStatus.Returned or LoanStatus.Cancelled))
+        {
+            throw new ArgumentOutOfRangeException(nameof(status), "A loan can only be closed as returned or cancelled.");
+        }
+
+        if ((status == LoanStatus.Returned) != returnDateUtc.HasValue)
+        {
+            throw new ArgumentException("Only returned loans can have a return date.", nameof(returnDateUtc));
+        }
+
+        return await dbContext.Loans
+            .Where(loan => loan.Id == id && loan.Status == LoanStatus.Active)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(loan => loan.Status, status)
+                    .SetProperty(loan => loan.ReturnDateUtc, returnDateUtc),
+                cancellationToken) == 1;
+    }
+
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
         dbContext.SaveChangesAsync(cancellationToken);
 }

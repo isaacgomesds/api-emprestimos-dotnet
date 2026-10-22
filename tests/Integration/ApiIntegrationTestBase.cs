@@ -10,6 +10,7 @@ namespace ApiEmprestimos.Tests.Integration;
 public abstract class ApiIntegrationTestBase(ApiIntegrationFixture fixture) : IAsyncLifetime
 {
     protected HttpClient Client => fixture.Client;
+    protected HttpClient SecondClient => fixture.SecondClient;
 
     public Task InitializeAsync() => fixture.ResetStateAsync();
 
@@ -52,6 +53,25 @@ public abstract class ApiIntegrationTestBase(ApiIntegrationFixture fixture) : IA
         var book = await dbContext.Books.SingleAsync(candidate => candidate.Id == bookId);
         var loanCount = await dbContext.Loans.CountAsync(loan => loan.BookId == bookId);
         return (book.AvailableCopies, loanCount);
+    }
+
+    protected async Task<IReadOnlyList<(Guid Id, LoanStatus Status)>> GetLoanStatesAsync(Guid bookId)
+    {
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LibraryDbContext>();
+        var loans = await dbContext.Loans
+            .AsNoTracking()
+            .Where(loan => loan.BookId == bookId)
+            .Select(loan => new { loan.Id, loan.Status })
+            .ToListAsync();
+        return loans.Select(loan => (loan.Id, loan.Status)).ToList();
+    }
+
+    protected async Task<int> GetBookCountByIsbnAsync(string isbn)
+    {
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LibraryDbContext>();
+        return await dbContext.Books.CountAsync(book => book.Isbn == isbn);
     }
 
     protected async Task<(string Title, string Author, string Isbn)> GetBookDetailsAsync(Guid bookId)

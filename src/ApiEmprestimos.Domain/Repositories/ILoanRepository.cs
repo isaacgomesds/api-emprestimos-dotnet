@@ -14,5 +14,10 @@ public interface ILoanRepository
     Task<IReadOnlyList<Loan>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Loan>> GetByBookIdAsync(Guid bookId, CancellationToken cancellationToken = default);
     Task RegisterAsync(Loan loan, CancellationToken cancellationToken = default);
+    Task<bool> TryCloseActiveLoanAsync(
+        Guid id,
+        LoanStatus status,
+        DateTime? returnDateUtc,
+        CancellationToken cancellationToken = default);
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

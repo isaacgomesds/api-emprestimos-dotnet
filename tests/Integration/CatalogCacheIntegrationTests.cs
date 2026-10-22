@@ -42,7 +42,9 @@ public sealed class CatalogCacheIntegrationTests(ApiIntegrationFixture fixture)
         (await GetCatalogAsync()).Single(book => book.Id == bookId).AvailableCopies.Should().Be(1);
         (await GetBookAsync(bookId)).AvailableCopies.Should().Be(1);
 
-        using var returnResponse = await Client.PostAsync($"/loans/{createdLoan!.Id}/return", content: null);
+        using var returnResponse = await SecondClient.PostAsync(
+            $"/loans/{createdLoan!.Id}/return",
+            content: null);
         returnResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         (await GetCatalogAsync()).Single(book => book.Id == bookId).AvailableCopies.Should().Be(2);
         (await GetBookAsync(bookId)).AvailableCopies.Should().Be(2);
@@ -58,11 +60,13 @@ public sealed class CatalogCacheIntegrationTests(ApiIntegrationFixture fixture)
         secondLoan.Should().NotBeNull();
         (await GetCatalogAsync()).Single(book => book.Id == bookId).AvailableCopies.Should().Be(1);
 
-        using var cancelResponse = await Client.PostAsync($"/loans/{secondLoan!.Id}/cancel", content: null);
+        using var cancelResponse = await SecondClient.PostAsync(
+            $"/loans/{secondLoan!.Id}/cancel",
+            content: null);
         cancelResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         (await GetCatalogAsync()).Single(book => book.Id == bookId).AvailableCopies.Should().Be(2);
 
-        using var updateResponse = await Client.PatchAsJsonAsync(
+        using var updateResponse = await SecondClient.PatchAsJsonAsync(
             $"/books/{bookId}",
             new { Title = "Updated Catalog Title", TotalCopies = 3 });
         updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -84,7 +88,7 @@ public sealed class CatalogCacheIntegrationTests(ApiIntegrationFixture fixture)
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         (await GetCatalogAsync()).Should().Contain(book => book.Title == "New Catalog Book");
 
-        using var deactivateResponse = await Client.DeleteAsync($"/books/{bookId}");
+        using var deactivateResponse = await SecondClient.DeleteAsync($"/books/{bookId}");
         deactivateResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await GetCatalogAsync()).Should().NotContain(book => book.Id == bookId);
         var inactiveBook = await GetBookAsync(bookId);

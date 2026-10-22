@@ -17,20 +17,20 @@ public sealed class ApiIntegrationTestCollection : ICollectionFixture<ApiIntegra
 
 public sealed class ApiIntegrationFixture : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-        .WithImage("postgres:17-alpine")
+    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:17-alpine")
         .WithDatabase("api_emprestimos_test")
         .WithUsername("postgres")
         .WithPassword("postgres-test-password")
         .Build();
-    private readonly RedisContainer _redis = new RedisBuilder()
-        .WithImage("redis:7-alpine")
+    private readonly RedisContainer _redis = new RedisBuilder("redis:7-alpine")
         .Build();
     private ApiWebApplicationFactory? _factory;
+    private ApiWebApplicationFactory? _secondFactory;
     private string? _originalPostgresConnectionString;
     private string? _originalRedisConnectionString;
 
     public HttpClient Client { get; private set; } = null!;
+    public HttpClient SecondClient { get; private set; } = null!;
     public IServiceProvider Services => _factory?.Services
         ?? throw new InvalidOperationException("The API host has not been initialized.");
 
@@ -52,6 +52,11 @@ public sealed class ApiIntegrationFixture : IAsyncLifetime
         await using var scope = Services.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<LibraryDbContext>();
         await dbContext.Database.MigrateAsync();
+
+        _secondFactory = new ApiWebApplicationFactory(
+            _postgres.GetConnectionString(),
+            _redis.GetConnectionString());
+        SecondClient = _secondFactory.CreateClient();
     }
 
     public async Task ResetStateAsync()
@@ -79,6 +84,12 @@ public sealed class ApiIntegrationFixture : IAsyncLifetime
     public async Task DisposeAsync()
     {
         Client?.Dispose();
+        SecondClient?.Dispose();
+        if (_secondFactory is not null)
+        {
+            await _secondFactory.DisposeAsync();
+        }
+
         if (_factory is not null)
         {
             await _factory.DisposeAsync();

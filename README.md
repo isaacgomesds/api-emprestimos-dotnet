@@ -101,16 +101,16 @@ O banco é migrado automaticamente ao iniciar a API e inclui estes dados para te
 
 ### EF Core Migrations
 
-```bash
-dotnet ef database update --project src/ApiEmprestimos.Infrastructure --startup-project src/ApiEmprestimos.Api
-```
-
-Se a ferramenta do EF não estiver instalada globalmente:
+Ao iniciar, a API aplica automaticamente as migrations pendentes usando `Database.MigrateAsync()`. Em desenvolvimento, a ferramenta local abaixo permite aplicar migrations manualmente como alternativa a iniciar a API primeiro; não é um passo adicional obrigatório.
 
 ```bash
 dotnet tool restore
-dotnet ef database update --project src/ApiEmprestimos.Infrastructure --startup-project src/ApiEmprestimos.Api
+dotnet ef database update --project src/ApiEmprestimos.Infrastructure/ApiEmprestimos.Infrastructure.csproj --startup-project src/ApiEmprestimos.Api/ApiEmprestimos.Api.csproj
 ```
+
+O manifesto versionado `.config/dotnet-tools.json` fixa `dotnet-ef` em `10.0.13`, compatível com a versão do EF Core usada pelo projeto. Configure `ConnectionStrings__LibraryDatabase` para um banco local de desenvolvimento antes de executar o comando. Não aplique migrations manualmente em produção sem seguir o processo de mudança apropriado.
+
+Para criar uma migration, use `dotnet ef migrations add <NomeDaMigration>` com os mesmos argumentos `--project` e `--startup-project`.
 
 ### Testes
 
@@ -118,7 +118,7 @@ dotnet ef database update --project src/ApiEmprestimos.Infrastructure --startup-
 dotnet test
 ```
 
-A suíte cobre testes unitários, testes de integração com PostgreSQL e Redis em containers, cenário de concorrência para o último exemplar e idempotência de empréstimos.
+A suíte inclui testes unitários e testes de integração com PostgreSQL e Redis em containers para disponibilidade concorrente, devoluções, ISBN duplicado, idempotência, histórico e métricas de empréstimos. Os testes de integração exigem Docker em execução.
 
 ### Coleção Postman
 
@@ -147,13 +147,15 @@ Importante:
 
 ### Concorrência Atômica no PostgreSQL
 
-A criação de empréstimos usa uma estratégia de atualização condicional em PostgreSQL para garantir que o último exemplar disponível não seja compartilhado por duas transações simultâneas.
+A criação de empréstimos usa uma estratégia de atualização condicional em PostgreSQL para garantir que o último exemplar disponível não seja compartilhado por duas transações simultâneas. Atualizações de estoque e devoluções também usam expressões atômicas no banco; a mudança do status do empréstimo e o ajuste do estoque de uma devolução/cancelamento participam da mesma transação.
 
 O comportamento central é:
 
 - verificar disponibilidade do livro e validade da operação dentro da mesma transação;
 - aplicar `UPDATE` condicional em `Books` com filtro `AvailableCopies > 0`;
-- validar o número de linhas alteradas para decidir sucesso ou rejeição.
+- validar o número de linhas alteradas para decidir sucesso ou rejeição;
+- persistir somente os campos de metadados alterados, sem sobrescrever estoque lido anteriormente;
+- atualizar o estoque com base nos valores atuais da linha, evitando read-modify-write em memória.
 
 Essa abordagem evita inventário negativo e mantém a fonte de verdade em PostgreSQL, sem depender de lógica de cache para a decisão final de disponibilidade.
 
@@ -163,15 +165,25 @@ O endpoint de criação de empréstimo aceita o cabeçalho `Idempotency-Key`. Re
 
 Requisições repetidas com a mesma chave:
 
-- reutilizam a resposta persistida, usando Redis quando disponível;
+- reutilizam a resposta persistida pelo cache Redis ou, em caso de cache miss/expiração, pelo registro durável no PostgreSQL;
 - não reexecutam a lógica de negócio;
 - não decrementam novamente a quantidade disponível do livro.
 
 Uma restrição única no banco e a inserção condicional do registro idempotente serializam também os casos em que o cache expira ou uma instância reinicia. Se a mesma chave for usada com corpo diferente, a API rejeita com erro de conflito.
 
+### Métricas de negócio
+
+O endpoint `/metrics` expõe estes contadores Prometheus, sem atributos de alta cardinalidade:
+
+- `api_loans_created_total`: empréstimos efetivamente persistidos; incrementa após a transação ser confirmada, não em replay.
+- `api_loans_rejected_no_available_copies_total`: tentativas rejeitadas especificamente por falta de exemplares; outros conflitos e erros não incrementam este contador.
+- `api_loans_idempotent_replays_total`: requisições repetidas que reutilizam uma resposta armazenada, seja pelo cache Redis ou pelo registro durável no PostgreSQL.
+
+Os contadores são locais ao processo. O Prometheus deve coletar cada réplica e agregar as séries para obter os totais do serviço.
+
 ### Cache de leitura e invalidação
 
-Consultas de catálogo e disponibilidade utilizam Redis para reduzir latência de leitura. O middleware de cache acompanha a versão do catálogo e usa chaves versionadas para evitar inconsistência entre respostas antigas e dados atuais.
+Consultas de catálogo e disponibilidade utilizam Redis para reduzir latência de leitura. O middleware de cache acompanha a versão do catálogo e usa chaves versionadas. Ele invalida a versão antes da mutação e novamente após uma resposta bem-sucedida para limitar a janela de respostas desatualizadas. Como PostgreSQL e Redis não compartilham uma transação, uma leitura muito próxima ao commit ainda pode observar uma entrada antiga; a decisão final de disponibilidade sempre usa o PostgreSQL.
 
 Quando ocorrem:
 
@@ -180,7 +192,7 @@ Quando ocorrem:
 - devolução;
 - cancelamento;
 
-o sistema incrementa a versão do catálogo e/ou invalida as chaves relevantes, mantendo as leituras consistentes com o estado atual do domínio.
+o sistema incrementa a versão do catálogo e/ou invalida as chaves relevantes para reduzir a janela de respostas desatualizadas. A decisão de disponibilidade para empréstimos continua sendo feita no PostgreSQL.
 
 ### Trilha de Auditoria de Domínio
 
@@ -198,17 +210,9 @@ Isso preserva uma trilha de negócios útil para auditoria, suporte e investiga�
 
 ## Escalabilidade em Kubernetes
 
-Os manifests em `k8s/` incluem Deployment e Service para a API. A aplicação foi projetada para operar corretamente em múltiplas réplicas, mantendo as regras de concorrência e idempotência mesmo com escala horizontal.
+Os manifests em `k8s/` incluem Deployment e Service. Para operar com mais de uma réplica, todas devem apontar para o mesmo PostgreSQL e Redis. A integridade do estoque usa atualizações condicionais/atômicas no PostgreSQL; a idempotência também usa índice único e resposta persistida no PostgreSQL, enquanto Redis coordena o caminho rápido e o cache compartilhado.
 
-### Comportamento seguro entre 2 e 11 réplicas
-
-- PostgreSQL continua sendo a fonte de verdade para estoque real.
-- O lock de disponibilidade é atômico na base de dados, reduzindo risco de race condition entre pods.
-- Redis armazena as respostas idempotentes e dados de cache compartilhados entre as réplicas.
-- A leitura e a escrita do cache ficam versionadas para evitar resposta desatualizada após alteração de catálogo.
-- Health checks e probes garantem que apenas pods prontos recebam tráfego.
-
-Com 2 a 11 réplicas, a solução permanece segura porque a decisão de empréstimo bem-sucedido depende de um controle concorrente consistente no banco, não apenas do estado local de uma instância.
+A suíte de integração contém cenários destinados a validar dois hosts da API compartilhando PostgreSQL e Redis. Ainda precisam ser executados com Docker; quando executados, exercitam invariantes entre hosts no processo de teste, mas não constituem teste de carga nem validam uma capacidade específica de réplicas em produção. A disponibilidade de Redis continua necessária para o middleware atual.
 
 ## Limitações Conhecidas e Próximos Passos
 
@@ -229,4 +233,4 @@ Com 2 a 11 réplicas, a solução permanece segura porque a decisão de emprést
 
 ## Conclusão
 
-A solução balanceia consistência transacional, idempotência, cache de leitura e rastreabilidade de domínio. Essa combinação é essencial para APIs de empréstimo em ambientes com múltiplas réplicas e concorrência real.
+A implementação concentra as atualizações de estoque e a persistência da idempotência no PostgreSQL, usando Redis para coordenação e cache de leitura. A confirmação dos cenários de concorrência depende da execução dos testes de integração com Docker.

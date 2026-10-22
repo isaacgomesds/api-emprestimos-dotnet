@@ -1,4 +1,5 @@
 using ApiEmprestimos.Application;
+using ApiEmprestimos.Application.Common;
 using ApiEmprestimos.Api.Endpoints;
 using ApiEmprestimos.Api.Middleware;
 using ApiEmprestimos.Infrastructure;
@@ -56,6 +57,7 @@ var openTelemetry = builder.Services.AddOpenTelemetry()
         .AddAspNetCoreInstrumentation()
         .AddRuntimeInstrumentation()
         .AddMeter(DependencyHealthMetrics.MeterName)
+        .AddMeter(LoanMetrics.MeterName)
         .AddPrometheusExporter());
 
 if (!string.IsNullOrWhiteSpace(otlpEndpoint))

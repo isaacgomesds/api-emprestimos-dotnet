@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using ApiEmprestimos.Application.Common;
 using Microsoft.AspNetCore.Mvc;
 using StackExchange.Redis;
 
@@ -10,7 +11,8 @@ public sealed class RedisCacheMiddleware(
     RequestDelegate next,
     IConnectionMultiplexer redis,
     IConfiguration configuration,
-    ILogger<RedisCacheMiddleware> logger)
+    ILogger<RedisCacheMiddleware> logger,
+    ILoanMetrics loanMetrics)
 {
     private const string KeyPrefix = "api-emprestimos";
     private const string CatalogVersionKey = $"{KeyPrefix}:catalog:version";
@@ -40,8 +42,14 @@ public sealed class RedisCacheMiddleware(
             return;
         }
 
+        var isCatalogMutation = IsCatalogMutation(context.Request);
+        if (isCatalogMutation)
+        {
+            await _database.StringIncrementAsync(CatalogVersionKey);
+        }
+
         await next(context);
-        if (IsCatalogMutation(context.Request) && IsSuccessful(context.Response.StatusCode))
+        if (isCatalogMutation && IsSuccessful(context.Response.StatusCode))
         {
             await _database.StringIncrementAsync(CatalogVersionKey);
         }
@@ -95,7 +103,7 @@ public sealed class RedisCacheMiddleware(
         var cachedResponse = await GetCachedIdempotentResponseAsync(responseKey, requestHash);
         if (cachedResponse is not null)
         {
-            await WriteResponseAsync(context, cachedResponse);
+            await WriteIdempotentReplayAsync(context, cachedResponse);
             return;
         }
 
@@ -114,7 +122,7 @@ public sealed class RedisCacheMiddleware(
                 cachedResponse = await GetCachedIdempotentResponseAsync(responseKey, requestHash);
                 if (cachedResponse is not null)
                 {
-                    await WriteResponseAsync(context, cachedResponse);
+                    await WriteIdempotentReplayAsync(context, cachedResponse);
                     return;
                 }
 
@@ -154,10 +162,11 @@ public sealed class RedisCacheMiddleware(
             cachedResponse = await GetCachedIdempotentResponseAsync(responseKey, requestHash);
             if (cachedResponse is not null)
             {
-                await WriteResponseAsync(context, cachedResponse);
+                await WriteIdempotentReplayAsync(context, cachedResponse);
                 return;
             }
 
+            await _database.StringIncrementAsync(CatalogVersionKey);
             var response = await CaptureResponseAsync(context);
             if (IsSuccessful(response.StatusCode))
             {
@@ -178,6 +187,12 @@ public sealed class RedisCacheMiddleware(
                 [lockKey],
                 [lockToken]);
         }
+    }
+
+    private async Task WriteIdempotentReplayAsync(HttpContext context, CachedResponse response)
+    {
+        loanMetrics.RecordIdempotentReplay();
+        await WriteResponseAsync(context, response);
     }
 
     private async Task<CachedResponse?> GetCachedIdempotentResponseAsync(

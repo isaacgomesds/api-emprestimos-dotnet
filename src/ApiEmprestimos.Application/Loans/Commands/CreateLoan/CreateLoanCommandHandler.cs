@@ -16,7 +16,8 @@ public sealed class CreateLoanCommandHandler(
     ILoanRepository loanRepository,
     IIdempotentRequestRepository idempotentRequestRepository,
     IAuditEventRepository auditEventRepository,
-    IUnitOfWork unitOfWork) : IRequestHandler<CreateLoanCommand, LoanResponseDto>
+    IUnitOfWork unitOfWork,
+    ILoanMetrics loanMetrics) : IRequestHandler<CreateLoanCommand, LoanResponseDto>
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -28,7 +29,7 @@ public sealed class CreateLoanCommandHandler(
         CancellationToken cancellationToken)
     {
         var requestHash = CreateRequestHash(request);
-        return await unitOfWork.ExecuteInTransactionAsync(async transactionCancellationToken =>
+        var result = await unitOfWork.ExecuteInTransactionAsync(async transactionCancellationToken =>
         {
             var idempotentRequest = IdempotentRequest.CreatePending(request.IdempotencyKey, requestHash);
             if (!await idempotentRequestRepository.TryCreateAsync(idempotentRequest, transactionCancellationToken))
@@ -44,8 +45,11 @@ public sealed class CreateLoanCommandHandler(
                         "The Idempotency-Key has already been used with a different request.");
                 }
 
-                return JsonSerializer.Deserialize<LoanResponseDto>(existingRequest.ResponseBody, JsonOptions)
+                var replayedResponse = JsonSerializer.Deserialize<LoanResponseDto>(
+                    existingRequest.ResponseBody,
+                    JsonOptions)
                     ?? throw new InvalidOperationException("The stored idempotent response is invalid.");
+                return (Response: replayedResponse, Created: false);
             }
 
             var book = await bookRepository.GetByIdAsync(request.BookId, transactionCancellationToken)
@@ -63,9 +67,23 @@ public sealed class CreateLoanCommandHandler(
                 throw new InvalidOperationException("The user already has an active loan for this book.");
             }
 
-            if (!await bookRepository.TryReserveCopyAsync(book.Id, transactionCancellationToken))
+            var reservationResult = await bookRepository.TryReserveCopyAsync(
+                book.Id,
+                transactionCancellationToken);
+            if (reservationResult != BookReservationResult.Reserved)
             {
-                throw new InvalidOperationException("The book is inactive or has no available copies.");
+                if (reservationResult == BookReservationResult.NoAvailableCopies)
+                {
+                    loanMetrics.RecordUnavailableLoanAttempt();
+                    throw new InvalidOperationException("The book has no available copies.");
+                }
+
+                if (reservationResult == BookReservationResult.BookNotFound)
+                {
+                    throw new KeyNotFoundException($"Book '{request.BookId}' was not found.");
+                }
+
+                throw new InvalidOperationException("The book is inactive.");
             }
 
             var loan = Loan.Create(request.BookId, request.UserId, request.LoanDateUtc, request.DueDateUtc);
@@ -95,8 +113,19 @@ public sealed class CreateLoanCommandHandler(
                 JsonSerializer.Serialize(loanResponse, JsonOptions));
             await idempotentRequestRepository.SaveChangesAsync(transactionCancellationToken);
 
-            return loanResponse;
+            return (Response: loanResponse, Created: true);
         }, cancellationToken);
+
+        if (result.Created)
+        {
+            loanMetrics.RecordLoanCreated();
+        }
+        else
+        {
+            loanMetrics.RecordIdempotentReplay();
+        }
+
+        return result.Response;
     }
 
     private static string CreateRequestHash(CreateLoanCommand request)

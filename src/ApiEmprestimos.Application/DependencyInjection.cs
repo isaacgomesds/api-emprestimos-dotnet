@@ -1,4 +1,5 @@
 using System.Reflection;
+using ApiEmprestimos.Application.Common;
 using ApiEmprestimos.Application.Common.Behaviors;
 using FluentValidation;
 using MediatR;
@@ -16,6 +17,9 @@ public static class DependencyInjection
             configuration.RegisterServicesFromAssembly(applicationAssembly));
         services.AddValidatorsFromAssembly(applicationAssembly);
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+        services.AddSingleton<LoanMetrics>();
+        services.AddSingleton<ILoanMetrics>(serviceProvider =>
+            serviceProvider.GetRequiredService<LoanMetrics>());
 
         return services;
     }
