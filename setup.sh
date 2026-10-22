@@ -26,6 +26,7 @@ connection_string="${connection_string/Host=postgres/Host=localhost}"
 export ConnectionStrings__LibraryDatabase="$connection_string"
 
 dotnet tool restore
+dotnet restore
 dotnet ef database update \
     --project src/ApiEmprestimos.Infrastructure/ApiEmprestimos.Infrastructure.csproj \
     --startup-project src/ApiEmprestimos.Api/ApiEmprestimos.Api.csproj

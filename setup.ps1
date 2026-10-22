@@ -33,6 +33,11 @@ try {
         throw "dotnet tool restore failed with exit code $LASTEXITCODE."
     }
 
+    dotnet restore
+    if ($LASTEXITCODE -ne 0) {
+        throw "dotnet restore failed with exit code $LASTEXITCODE."
+    }
+
     dotnet ef database update `
         --project src/ApiEmprestimos.Infrastructure/ApiEmprestimos.Infrastructure.csproj `
         --startup-project src/ApiEmprestimos.Api/ApiEmprestimos.Api.csproj
