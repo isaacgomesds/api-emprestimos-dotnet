@@ -46,7 +46,7 @@ No Windows PowerShell, use:
 .\setup.ps1
 ```
 
-O script cria `.env` a partir de `.env.example` se necessário e executa `docker compose up -d --build`. A API ficará disponível em `http://localhost:5000`.
+O script cria `.env` a partir de `.env.example` se necessário, inicia PostgreSQL e Redis, aplica as migrations e então constrói e inicia a API. A API ficará disponível em `http://localhost:5000`.
 
 2. Copie `.env.example` para `.env` antes de executar o Compose:
 
@@ -60,7 +60,13 @@ cp .env.example .env
 Copy-Item .env.example .env
 ```
 
-3. Inicie os serviços, construindo a imagem da API:
+3. Para iniciar manualmente, suba PostgreSQL e Redis e aplique as migrations conforme a seção abaixo antes de iniciar a API:
+
+```bash
+docker compose up -d --wait postgres redis
+```
+
+Depois de aplicar as migrations, inicie os serviços e construa a imagem da API:
 
 ```bash
 docker compose up --build -d
@@ -83,7 +89,7 @@ Endpoints principais:
 
 ## Dados de exemplo
 
-O banco é migrado automaticamente ao iniciar a API e inclui estes dados para testes:
+As migrations do EF Core incluem estes dados de exemplo para testes:
 
 **Livros**
 
@@ -101,14 +107,16 @@ O banco é migrado automaticamente ao iniciar a API e inclui estes dados para te
 
 ### EF Core Migrations
 
-Ao iniciar, a API aplica automaticamente as migrations pendentes usando `Database.MigrateAsync()`. Em desenvolvimento, a ferramenta local abaixo permite aplicar migrations manualmente como alternativa a iniciar a API primeiro; não é um passo adicional obrigatório.
+A aplicação automática de migrations na inicialização da API foi removida. Aplicar as migrations manualmente é obrigatório antes de executar a API fora do fluxo do Docker Compose e durante o desenvolvimento local. Os scripts `setup.sh` e `setup.ps1` cuidam dessa etapa no fluxo de configuração do Docker Compose.
+
+Execute os comandos a partir da raiz do repositório. O manifesto `.config/dotnet-tools.json` está incluído e fixa a ferramenta local `dotnet-ef` na versão `10.0.13`; portanto, `dotnet tool restore` restaura essa versão antes de executar o comando de atualização do banco:
 
 ```bash
 dotnet tool restore
 dotnet ef database update --project src/ApiEmprestimos.Infrastructure/ApiEmprestimos.Infrastructure.csproj --startup-project src/ApiEmprestimos.Api/ApiEmprestimos.Api.csproj
 ```
 
-O manifesto versionado `.config/dotnet-tools.json` fixa `dotnet-ef` em `10.0.13`, compatível com a versão do EF Core usada pelo projeto. Configure `ConnectionStrings__LibraryDatabase` para um banco local de desenvolvimento antes de executar o comando. Não aplique migrations manualmente em produção sem seguir o processo de mudança apropriado.
+Antes de executar os comandos, configure `ConnectionStrings__LibraryDatabase` para apontar a um banco local acessível pelo ambiente onde o comando será executado. Não aplique migrations manualmente em produção sem seguir o processo de mudança apropriado.
 
 Para criar uma migration, use `dotnet ef migrations add <NomeDaMigration>` com os mesmos argumentos `--project` e `--startup-project`.
 
