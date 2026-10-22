@@ -68,12 +68,6 @@ if (!string.IsNullOrWhiteSpace(otlpEndpoint))
 
 var app = builder.Build();
 
-await using (var scope = app.Services.CreateAsyncScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<LibraryDbContext>();
-    await dbContext.Database.MigrateAsync();
-}
-
 app.UseMiddleware<CorrelationLoggingMiddleware>();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
